@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: client-ip-api-template
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: ${NAMESPACE}
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    name: ${APP_NAME}
+    namespace: ${NAMESPACE}
+  spec:
+    source:
+      git:
+        uri: ${GIT_REPO}
+        ref: ${GIT_BRANCH}
+      type: Git
+    strategy:
+      type: Docker
+    output:
+      to:
+        kind: ImageStreamTag
+        name: "${APP_NAME}:latest"
+    triggers:
+      - type: ConfigChange
+      - type: GitHub
+    runPolicy: Serial
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: ${APP_NAME}
+    namespace: ${NAMESPACE}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${APP_NAME}
+    namespace: ${NAMESPACE}
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${APP_NAME}
+    template:
+      metadata:
+        labels:
+          app: ${APP_NAME}
+      spec:
+        containers:
+          - name: ${APP_NAME}
+            image: image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/${APP_NAME}:latest
+            ports:
+              - containerPort: 8080
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${APP_NAME}
+    namespace: ${NAMESPACE}
+  spec:
+    selector:
+      app: ${APP_NAME}
+    ports:
+      - protocol: TCP
+        port: 80
+        targetPort: 8080
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    name: ${APP_NAME}
+    namespace: ${NAMESPACE}
+  spec:
+    to:
+      kind: Service
+      name: ${APP_NAME}
+    port:
+      targetPort: 8080
+    tls:
+      termination: edge
+parameters:
+  - name: NAMESPACE
+    value: client-ip-api
+  - name: APP_NAME
+    value: client-ip-api
+  - name: GIT_REPO
+    description: Repositório Git com a aplicação
+    value: https://github.com/thiagobotelho/client-ip-api-openshift.git
+  - name: GIT_BRANCH
+    value: main
+  - name: IMAGE_NAME
+    value: client-ip-api
