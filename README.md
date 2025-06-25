@@ -14,6 +14,7 @@ client-ip-api-openshift/
 ├── requirements.txt      # Dependências Python
 └── templates/
     └── client-ip-api-template.yaml  # Template OpenShift completo
+```
 
 ---
 
@@ -52,6 +53,7 @@ O template utiliza um `BuildConfig` com estratégia `Docker` e source do tipo `G
 ```bash
 git clone https://github.com/seuusuario/client-ip-api-openshift.git
 cd client-ip-api-openshift
+```
 
 2. Aplique o template com os parâmetros desejados:
 
@@ -62,6 +64,7 @@ oc process -f templates/client-ip-api-template.yaml \
   -p NAMESPACE=client-ip-api \
   -p APP_NAME=client-ip-api \
   | oc apply -f -
+```
 
 ---
 
@@ -70,6 +73,7 @@ oc process -f templates/client-ip-api-template.yaml \
 ```bash
 curl https://<ROTA>/
 # Saída esperada: Client IP: <ip_do_cliente>
+```
 
 📌 Observações
 
