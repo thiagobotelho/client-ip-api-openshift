@@ -8,33 +8,6 @@ objects:
   metadata:
     name: ${NAMESPACE}
 
-- apiVersion: build.openshift.io/v1
-  kind: BuildConfig
-  metadata:
-    name: ${APP_NAME}
-    namespace: ${NAMESPACE}
-  spec:
-    source:
-      type: Git
-      git:
-        uri: ${GIT_REPO}
-        ref: ${GIT_BRANCH}
-    strategy:
-      type: Docker
-    output:
-      to:
-        kind: ImageStreamTag
-        name: "${APP_NAME}:latest"
-    triggers:
-      - type: ConfigChange
-      - type: Git
-
-- apiVersion: image.openshift.io/v1
-  kind: ImageStream
-  metadata:
-    name: ${APP_NAME}
-    namespace: ${NAMESPACE}
-
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -52,7 +25,7 @@ objects:
       spec:
         containers:
           - name: ${APP_NAME}
-            image: image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/${APP_NAME}:latest
+            image: quay.io/thiagobotelho/client-ip-api:latest
             ports:
               - containerPort: 8080
 
@@ -85,17 +58,9 @@ objects:
 
 parameters:
   - name: APP_NAME
-    description: Nome da aplicação (usado em todos os objetos)
+    description: Nome da aplicação (usado nos objetos)
     value: client-ip-api
 
   - name: NAMESPACE
     description: Namespace onde a aplicação será provisionada
     value: client-ip-api
-
-  - name: GIT_REPO
-    description: Repositório Git contendo o Dockerfile e o código fonte
-    value: https://github.com/thiagobotelho/client-ip-api-openshift.git
-
-  - name: GIT_BRANCH
-    description: Branch Git a ser usada no build
-    value: main
