@@ -61,7 +61,7 @@ cd client-ip-api-openshift
 oc process -f templates/client-ip-api-template.yaml | oc apply -f -
 ```
 
-2. (Opcional) Personalize os parâmetros durante a execução:
+3. (Opcional) Personalize os parâmetros durante a execução:
 
 ```bash
 oc process -f templates/client-ip-api-template.yaml \
