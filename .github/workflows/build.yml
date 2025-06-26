@@ -3,28 +3,24 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ main ]
-
-  workflow_dispatch:
+  workflow_dispatch:  # permite execução manual
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout do código-fonte
-      uses: actions/checkout@v3
+      - name: Checkout do código-fonte
+        uses: actions/checkout@v3
 
-    - name: Login no Quay.io
-      env:
-        QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
-        QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-      run: |
-        echo "${QUAY_PASSWORD}" | docker login quay.io -u "${QUAY_USERNAME}" --password-stdin
+      - name: Login no Quay.io
+        env:
+          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+        run: echo "${QUAY_PASSWORD}" | docker login quay.io -u "${QUAY_USERNAME}" --password-stdin
 
-    - name: Build da imagem Docker
-      run: |
-        docker build -t quay.io/${{ secrets.QUAY_USERNAME }}/client-ip-api:latest .
+      - name: Build da imagem Docker
+        run: docker build -t quay.io/thiagobotelho/client-ip-api:latest .
 
-    - name: Push da imagem para Quay.io
-      run: |
-        docker push quay.io/${{ secrets.QUAY_USERNAME }}/client-ip-api:latest
+      - name: Push da imagem para Quay.io
+        run: docker push quay.io/thiagobotelho/client-ip-api:latest
