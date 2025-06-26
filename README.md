@@ -1,48 +1,42 @@
-# client-ip-api-openshift
+# 🌐 client-ip-api-openshift
 
-Aplicação minimalista em Python (Flask) que retorna o IP do cliente na requisição HTTP. Este projeto foi desenvolvido para auxiliar testes de redes e balanceadores L4 (Proxy Protocol) ou L7 (Forwarded Headers) em clusters OpenShift 4.
+Aplicação minimalista em Python (Flask + Gunicorn) que retorna o IP de origem do cliente na requisição HTTP. Ideal para validação de balanceadores L4 (Proxy Protocol) e L7 (Forwarded Headers) em ambientes OpenShift 4+.
 
 ---
 
-📁 Estrutura do Projeto
+## 📁 Estrutura do Projeto
 
 ```bash
 client-ip-api-openshift/
 ├── app/
-│   └── main.py           # Código Flask que exibe o IP
-├── Dockerfile            # Dockerfile usado no BuildConfig
-├── requirements.txt      # Dependências Python
+│   ├── main.py            # Código principal da API
+│   └── static/
+│       └── favicon.ico    # Ícone exibido no navegador
+├── Dockerfile             # Dockerfile para build no GitHub Actions
+├── requirements.txt       # Dependências Python
 └── templates/
-    └── client-ip-api-template.yaml  # Template OpenShift completo
+    └── client-ip-api-template.yaml  # Template OpenShift para deploy
 ```
 
 ---
 
-
 ## 📦 Funcionalidades
 
-- Exibe o IP do cliente HTTP.
-- Suporte a headers como `X-Forwarded-For`.
-- Template OpenShift que provisiona automaticamente:
-  - Namespace (opcional)
-  - ImageStream e BuildConfig (build automático via Git)
-  - Deployment
-  - Service
-  - Route TLS (terminação edge)
+- Exibe o IP do cliente HTTP com base no cabeçalho `X-Forwarded-For` (L7) ou `remote_addr` (L4)
+- Detecta e diferencia o tipo de balanceador (L4/L7)
+- Log estruturado impresso no pod
+- Exibição de página HTML formatada com ícone e destaque
+- Suporte a favicon (`/favicon.ico`)
+- Deploy 100% automatizado via `oc process`
+- Build externo via GitHub Actions e push para Quay.io
 
 ---
 
 ## 🚀 Requisitos
 
-- OpenShift 4.x com acesso ao cluster via `oc`
-- Acesso ao registry interno (ImageStream)
-- Git com suporte a build sourceStrategy
-
----
-
-## 🏗️ Build da Imagem (Automático via OpenShift)
-
-O template utiliza um `BuildConfig` com estratégia `Docker` e source do tipo `Git`. Ao aplicar o template, o build é acionado automaticamente.
+- OpenShift 4.x com acesso via `oc`
+- Namespace com permissões para criar objetos
+- Quay.io com imagem `thiagobotelho/client-ip-api:latest`
 
 ---
 
@@ -55,18 +49,16 @@ git clone https://github.com/thiagobotelho/client-ip-api-openshift.git
 cd client-ip-api-openshift
 ```
 
-2. Aplique o template com os parâmetros padrão definidos no próprio arquivo:
+2. Aplique o template:
 
 ```bash
 oc process -f templates/client-ip-api-template.yaml | oc apply -f -
 ```
 
-3. (Opcional) Personalize os parâmetros durante a execução:
+3. (Opcional) Personalize os parâmetros:
 
 ```bash
 oc process -f templates/client-ip-api-template.yaml \
-  -p GIT_REPO=https://github.com/thiagobotelho/client-ip-api-openshift.git \
-  -p GIT_BRANCH=main \
   -p NAMESPACE=client-ip-api \
   -p APP_NAME=client-ip-api \
   | oc apply -f -
@@ -79,12 +71,22 @@ oc process -f templates/client-ip-api-template.yaml \
 ```bash
 oc get route -n client-ip-api
 curl https://<ROTA>/
-# Saída esperada: Client IP: <ip_do_cliente>
 ```
 
-📌 Observações
+---
 
-Para testes de headers L7 (X-Forwarded-For), verifique se o Ingress Controller ou balanceador externo adiciona corretamente o header.
+## 🛠️ Observações
 
-Para testes com Proxy Protocol (L4), a aplicação exibirá apenas request.remote_addr.
+- Para L7, o IP virá em `X-Forwarded-For`
+- Para L4 (proxy protocol), o IP será exibido como `remote_addr`
+- Os logs estarão disponíveis no pod:
 
+```bash
+oc logs -n client-ip-api deployment/client-ip-api
+```
+
+---
+
+## 📘 Licença
+
+MIT License
