@@ -1,15 +1,24 @@
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 import os
 
 app = Flask(__name__)
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico")
 
 @app.route("/")
 def index():
     x_forwarded_for = request.headers.get("X-Forwarded-For")
     remote_addr = request.remote_addr
-    client_ip = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else remote_addr
 
-    # Definir tipo do LB com base na diferença entre IPs
+    if x_forwarded_for:
+        # extrai apenas o primeiro IP (caso existam múltiplos)
+        client_ip = x_forwarded_for.split(",")[0].strip()
+    else:
+        client_ip = remote_addr
+
+    # comparação entre IPs para classificar o tipo de LB
     if x_forwarded_for and client_ip != remote_addr:
         lb_type = "LB do tipo L7"
         icon = "🌐"
