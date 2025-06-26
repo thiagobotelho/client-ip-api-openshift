@@ -58,6 +58,12 @@ cd client-ip-api-openshift
 2. Aplique o template com os parâmetros desejados:
 
 ```bash
+oc process -f templates/client-ip-api-template.yaml | oc apply -f -
+```
+
+2. (Opcional) Personalize os parâmetros durante a execução:
+
+```bash
 oc process -f templates/client-ip-api-template.yaml \
   -p GIT_REPO=https://github.com/thiagobotelho/client-ip-api-openshift.git \
   -p GIT_BRANCH=main \
@@ -71,6 +77,7 @@ oc process -f templates/client-ip-api-template.yaml \
 ## 🔍 Teste
 
 ```bash
+oc get route -n client-ip-api
 curl https://<ROTA>/
 # Saída esperada: Client IP: <ip_do_cliente>
 ```
