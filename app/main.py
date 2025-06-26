@@ -1,29 +1,25 @@
-from flask import Flask, request, send_from_directory
+from flask import Flask, request
 import os
 
 app = Flask(__name__)
-
-@app.route("/favicon.ico")
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico")
 
 @app.route("/")
 def index():
     x_forwarded_for = request.headers.get("X-Forwarded-For")
     remote_addr = request.remote_addr
+    client_ip = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else remote_addr
 
-    if x_forwarded_for:
-        client_ip = x_forwarded_for
+    # Definir tipo do LB com base na diferença entre IPs
+    if x_forwarded_for and client_ip != remote_addr:
         lb_type = "LB do tipo L7"
         icon = "🌐"
         color = "#007acc"
     else:
-        client_ip = remote_addr
         lb_type = "LB do tipo L4"
         icon = "🧱"
         color = "#cc0000"
 
-    print(f"{lb_type} | IP de origem: {client_ip} | remote_addr: {remote_addr} | X-Forwarded-For: {x_forwarded_for}")
+    app.logger.info(f"{lb_type} | IP de origem: {client_ip} | remote_addr: {remote_addr} | X-Forwarded-For: {x_forwarded_for}")
 
     html = f"""
     <html>
@@ -41,3 +37,6 @@ def index():
     </html>
     """
     return html, 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)
