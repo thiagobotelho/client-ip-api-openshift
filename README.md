@@ -51,7 +51,7 @@ O template utiliza um `BuildConfig` com estratégia `Docker` e source do tipo `G
 1. Clone o repositório:
 
 ```bash
-git clone https://github.com/seuusuario/client-ip-api-openshift.git
+git clone https://github.com/thiagobotelho/client-ip-api-openshift.git
 cd client-ip-api-openshift
 ```
 
