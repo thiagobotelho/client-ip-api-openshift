@@ -55,7 +55,7 @@ git clone https://github.com/thiagobotelho/client-ip-api-openshift.git
 cd client-ip-api-openshift
 ```
 
-2. Aplique o template com os parâmetros desejados:
+2. Aplique o template com os parâmetros padrão definidos no próprio arquivo:
 
 ```bash
 oc process -f templates/client-ip-api-template.yaml | oc apply -f -
