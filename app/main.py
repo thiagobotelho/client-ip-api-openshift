@@ -1,35 +1,38 @@
 from flask import Flask, request, send_from_directory
 import os
+import logging
+
+# Configura logging para ambiente Gunicorn
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
-@app.route("/favicon.ico")
+# Rota para favicon
+@app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico")
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
 
-@app.route("/")
+# Rota principal
+@app.route('/')
 def index():
     x_forwarded_for = request.headers.get("X-Forwarded-For")
     remote_addr = request.remote_addr
 
     if x_forwarded_for:
-        # extrai apenas o primeiro IP (caso existam múltiplos)
-        client_ip = x_forwarded_for.split(",")[0].strip()
-    else:
-        client_ip = remote_addr
-
-    # comparação entre IPs para classificar o tipo de LB
-    if x_forwarded_for and client_ip != remote_addr:
+        client_ip = x_forwarded_for
         lb_type = "LB do tipo L7"
         icon = "🌐"
         color = "#007acc"
     else:
+        client_ip = remote_addr
         lb_type = "LB do tipo L4"
         icon = "🧱"
         color = "#cc0000"
 
+    # Log estruturado
     app.logger.info(f"{lb_type} | IP de origem: {client_ip} | remote_addr: {remote_addr} | X-Forwarded-For: {x_forwarded_for}")
 
+    # HTML de resposta
     html = f"""
     <html>
       <head>
@@ -47,5 +50,6 @@ def index():
     """
     return html, 200
 
+# Para testes locais (não usado com Gunicorn)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
