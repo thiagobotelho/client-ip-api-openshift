@@ -1,4 +1,4 @@
-FROM python-312-minimal
+FROM registry.access.redhat.com/ubi10/python-312-minimal
 WORKDIR /app
 COPY app/ /app
 COPY requirements.txt .
