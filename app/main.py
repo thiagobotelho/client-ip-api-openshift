@@ -50,6 +50,38 @@ def classify_ip(ip):
         return "formato inválido"
 
 
+def ip_version(ip):
+    if not ip:
+        return "não informado"
+
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+        return f"IPv{ip_obj.version}"
+    except ValueError:
+        return "formato inválido"
+
+
+def ip_observation(ip):
+    if not ip:
+        return "IP não informado."
+
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+
+        if ip_obj.version == 6:
+            return (
+                "Cliente conectado via IPv6. Em redes modernas, o sufixo IPv6 pode mudar por privacidade "
+                "e não existe conversão automática para IPv4 na mesma requisição."
+            )
+
+        if ip_obj.version == 4:
+            return "Cliente identificado via IPv4."
+
+        return "Versão de IP não identificada."
+    except ValueError:
+        return "Não foi possível interpretar o IP informado."
+
+
 def get_client_context():
     x_forwarded_for = request.headers.get("X-Forwarded-For")
     true_client_ip = request.headers.get("True-Client-IP")
@@ -60,32 +92,40 @@ def get_client_context():
     xff_first_ip = first_ip_from_xff(x_forwarded_for)
     proxy_chain = proxy_chain_from_xff(x_forwarded_for)
 
-    if xff_first_ip:
-        client_ip = xff_first_ip
-        source = "X-Forwarded-For"
-        source_description = "IP real extraído do primeiro endereço da cadeia X-Forwarded-For"
-        detection_type = "Headers HTTP de proxy detectados"
-        color = "#007acc"
-    elif true_client_ip:
+    # Prioridade recomendada para cenário Akamai:
+    # 1. True-Client-IP: IP real identificado pela Akamai
+    # 2. Primeiro IP do X-Forwarded-For
+    # 3. X-Real-IP
+    # 4. remote_addr
+    if true_client_ip:
         client_ip = true_client_ip.strip()
         source = "True-Client-IP"
         source_description = (
-            "IP extraído do primeiro endereço da cadeia X-Forwarded-For. "
-            "Pode representar o cliente real ou um balanceador/proxy anterior, dependendo da arquitetura."
+            "IP real do cliente informado pela Akamai. "
+            "Quando presente e controlado pela CDN, tende a ser a fonte mais confiável."
         )
         detection_type = "CDN / Akamai"
+        color = "#007acc"
+    elif xff_first_ip:
+        client_ip = xff_first_ip
+        source = "X-Forwarded-For"
+        source_description = (
+            "IP extraído do primeiro endereço da cadeia X-Forwarded-For. "
+            "Pode representar o cliente real ou um proxy/balanceador anterior, dependendo da arquitetura."
+        )
+        detection_type = "Headers HTTP de proxy detectados"
         color = "#007acc"
     elif x_real_ip:
         client_ip = x_real_ip.strip()
         source = "X-Real-IP"
-        source_description = "IP real extraído do header X-Real-IP"
+        source_description = "IP extraído do header X-Real-IP, comum em proxies reversos."
         detection_type = "Proxy reverso"
         color = "#007acc"
     else:
         client_ip = remote_addr
         source = "remote_addr"
-        source_description = "IP da conexão TCP direta recebida pela aplicação"
-        detection_type = "Direto / L4 / Sem header L7"
+        source_description = "IP da conexão TCP direta recebida pela aplicação."
+        detection_type = "Direto / L4 / Sem header HTTP de proxy"
         color = "#cc0000"
 
     remote_addr_note = (
@@ -97,6 +137,8 @@ def get_client_context():
     return {
         "client_ip": client_ip,
         "client_ip_type": classify_ip(client_ip),
+        "client_ip_version": ip_version(client_ip),
+        "client_ip_observation": ip_observation(client_ip),
         "source": source,
         "source_description": source_description,
         "detection_type": detection_type,
@@ -104,10 +146,12 @@ def get_client_context():
         "xff_first_ip": xff_first_ip,
         "proxy_chain": proxy_chain,
         "true_client_ip": true_client_ip,
+        "true_client_ip_version": ip_version(true_client_ip),
         "x_real_ip": x_real_ip,
         "forwarded": forwarded,
         "remote_addr": remote_addr,
         "remote_addr_type": classify_ip(remote_addr),
+        "remote_addr_version": ip_version(remote_addr),
         "remote_addr_note": remote_addr_note,
         "host": request.headers.get("Host"),
         "user_agent": request.headers.get("User-Agent"),
@@ -124,8 +168,9 @@ def api():
     data = get_client_context()
 
     app.logger.info(
-        "client_ip=%s source=%s detection_type=%s remote_addr=%s xff=%s true_client_ip=%s host=%s",
+        "client_ip=%s client_ip_version=%s source=%s detection_type=%s remote_addr=%s xff=%s true_client_ip=%s host=%s",
         data["client_ip"],
+        data["client_ip_version"],
         data["source"],
         data["detection_type"],
         data["remote_addr"],
@@ -147,8 +192,9 @@ def index():
         chain_html = " → ".join(data["proxy_chain"])
 
     app.logger.info(
-        "client_ip=%s source=%s detection_type=%s remote_addr=%s xff=%s true_client_ip=%s host=%s",
+        "client_ip=%s client_ip_version=%s source=%s detection_type=%s remote_addr=%s xff=%s true_client_ip=%s host=%s",
         data["client_ip"],
+        data["client_ip_version"],
         data["source"],
         data["detection_type"],
         data["remote_addr"],
@@ -174,35 +220,46 @@ def index():
           </h1>
 
           <p style="text-align: center; color: #666; font-size: 1em;">
-            Diagnóstico de IP real do cliente, headers HTTP, CDN, proxy reverso, balanceador L7 e OpenShift.
+            Diagnóstico de IP real do cliente, headers HTTP, CDN, proxy reverso, balanceador L7/L4 e OpenShift.
           </p>
 
           <section style="text-align: center; margin-top: 35px; padding: 30px; background: #eef6fc; border-radius: 12px;">
             <h2 style="margin-bottom: 10px;">IP real identificado</h2>
-            <p style="font-size: 3em; font-weight: bold; color: {data['color']}; margin: 10px 0;">
+            <p style="font-size: 2.6em; font-weight: bold; color: {data['color']}; margin: 10px 0; word-break: break-all;">
               {data['client_ip']}
             </p>
             <p>
               Fonte utilizada:
               <strong>{data['source']}</strong>
             </p>
+            <p>
+              Versão:
+              <strong>{data['client_ip_version']}</strong>
+              |
+              Classificação:
+              <strong>{data['client_ip_type']}</strong>
+            </p>
             <p style="color: #555;">
               {data['source_description']}
             </p>
+            <p style="color: #555;">
+              {data['client_ip_observation']}
+            </p>
             <p>
-              Tipo detectado:
+              Evidência detectada:
               <strong>{data['detection_type']}</strong>
             </p>
           </section>
 
           <section style="margin-top: 35px;">
             <h2>🔗 Cadeia de proxy</h2>
-            <div style="background: #f1f1f1; padding: 18px; border-radius: 10px; font-size: 1.1em;">
+            <div style="background: #f1f1f1; padding: 18px; border-radius: 10px; font-size: 1.1em; word-break: break-all;">
               <strong>X-Forwarded-For chain:</strong><br>
               {chain_html}
             </div>
             <p style="color: #666; font-size: 0.95em;">
-              Regra recomendada: quando existir X-Forwarded-For, o primeiro IP da lista normalmente representa o cliente original.
+              Observação: quando existir <strong>True-Client-IP</strong>, ele pode representar melhor o cliente real em cenários Akamai.
+              O primeiro IP do <strong>X-Forwarded-For</strong> pode ser cliente real, CDN, NAT ou balanceador anterior, conforme a arquitetura.
             </p>
           </section>
 
@@ -211,16 +268,22 @@ def index():
 
             <table style="width: 100%; border-collapse: collapse; font-size: 0.98em;">
               <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>True-Client-IP</strong></td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; word-break: break-all;">
+                  {data['true_client_ip'] or '-'}
+                  <br>
+                  <span style="color: #777; font-size: 0.9em;">
+                    Versão: {data['true_client_ip_version']}
+                  </span>
+                </td>
+              </tr>
+              <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>X-Forwarded-For</strong></td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{data['x_forwarded_for'] or '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; word-break: break-all;">{data['x_forwarded_for'] or '-'}</td>
               </tr>
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Primeiro IP do XFF</strong></td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{data['xff_first_ip'] or '-'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>True-Client-IP</strong></td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{data['true_client_ip'] or '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; word-break: break-all;">{data['xff_first_ip'] or '-'}</td>
               </tr>
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>X-Real-IP</strong></td>
@@ -228,25 +291,26 @@ def index():
               </tr>
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Forwarded</strong></td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{data['forwarded'] or '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; word-break: break-all;">{data['forwarded'] or '-'}</td>
               </tr>
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>remote_addr</strong></td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; word-break: break-all;">
                   {data['remote_addr'] or '-'}
                   <br>
                   <span style="color: #777; font-size: 0.9em;">
+                    Versão: {data['remote_addr_version']} |
                     Classificação: {data['remote_addr_type']} — provável IP interno/intermediário no OpenShift.
                   </span>
                 </td>
               </tr>
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Host</strong></td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{data['host'] or '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; word-break: break-all;">{data['host'] or '-'}</td>
               </tr>
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>User-Agent</strong></td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{data['user_agent'] or '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; word-break: break-all;">{data['user_agent'] or '-'}</td>
               </tr>
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Timestamp</strong></td>
@@ -270,12 +334,12 @@ def index():
               Thiago Botelho
             </p>
             <p style="font-size: 0.85em; color: #888; margin-top: 8px;">
-              Client IP Analyzer • Observabilidade de rede • OpenShift • L7/L4
+              Client IP Analyzer • Observabilidade de rede • OpenShift • Akamai • L7/L4
             </p>
             <p style="margin-top: 10px;">
               <a href="https://github.com/thiagobotelho/client-ip-api-openshift" target="_blank"
                 style="text-decoration: none; color: #007acc; font-size: 0.9em;">
-                🔗 github.com/thiagobotelho
+                🔗 github.com/thiagobotelho/client-ip-api-openshift
               </a>
             </p>
           </footer>
