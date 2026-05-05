@@ -64,12 +64,15 @@ def get_client_context():
         client_ip = xff_first_ip
         source = "X-Forwarded-For"
         source_description = "IP real extraído do primeiro endereço da cadeia X-Forwarded-For"
-        detection_type = "L7 / CDN / Proxy reverso"
+        detection_type = "Headers HTTP de proxy detectados"
         color = "#007acc"
     elif true_client_ip:
         client_ip = true_client_ip.strip()
         source = "True-Client-IP"
-        source_description = "IP real extraído do header True-Client-IP, comum em integrações com Akamai"
+        source_description = (
+            "IP extraído do primeiro endereço da cadeia X-Forwarded-For. "
+            "Pode representar o cliente real ou um balanceador/proxy anterior, dependendo da arquitetura."
+        )
         detection_type = "CDN / Akamai"
         color = "#007acc"
     elif x_real_ip:
@@ -259,9 +262,22 @@ def index():
             </p>
           </section>
 
-          <footer style="margin-top: 50px; text-align: center; color: #777; font-size: 0.95em;">
-            <p>Desenvolvido por <strong>Thiago Botelho</strong></p>
-            <p>client-ip-api powered by Flask + Gunicorn</p>
+          <footer style="margin-top: 60px; text-align: center; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+            <p style="font-size: 1.05em; color: #444; margin-bottom: 5px;">
+              Desenvolvido por
+            </p>
+            <p style="font-size: 1.3em; font-weight: bold; color: #007acc; margin: 0;">
+              Thiago Botelho
+            </p>
+            <p style="font-size: 0.85em; color: #888; margin-top: 8px;">
+              Client IP Analyzer • Observabilidade de rede • OpenShift • L7/L4
+            </p>
+            <p style="margin-top: 10px;">
+              <a href="https://github.com/thiagobotelho/client-ip-api-openshift" target="_blank"
+                style="text-decoration: none; color: #007acc; font-size: 0.9em;">
+                🔗 github.com/thiagobotelho
+              </a>
+            </p>
           </footer>
 
         </main>
