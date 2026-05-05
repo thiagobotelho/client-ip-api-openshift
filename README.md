@@ -22,13 +22,29 @@ client-ip-api-openshift/
 
 ## 📦 Funcionalidades
 
-- Exibe o IP do cliente HTTP com base no cabeçalho `X-Forwarded-For` (L7) ou `remote_addr` (L4)
-- Detecta e diferencia o tipo de balanceador (L4/L7)
-- Log estruturado impresso no pod
-- Exibição de página HTML formatada com ícone e destaque
+- Identificação do IP real do cliente com priorização inteligente:
+  - `X-Forwarded-For` (primeiro IP da cadeia – padrão L7)
+  - `True-Client-IP` (CDN Akamai)
+  - `X-Real-IP`
+  - `remote_addr` (fallback L4)
+- Exibição da cadeia completa de proxies (X-Forwarded-For)
+- Classificação automática do tipo de origem:
+  - L4 (direto)
+  - L7 (proxy reverso / load balancer)
+  - CDN (Akamai)
+- Endpoint JSON `/api` para integração com ferramentas externas
+- Página HTML com visual aprimorado para troubleshooting e análise
+- Exibição detalhada de headers relevantes:
+  - `X-Forwarded-For`
+  - `True-Client-IP`
+  - `X-Real-IP`
+  - `Forwarded`
+  - `Host`, `User-Agent`, `remote_addr`
+- Identificação e classificação de IP (privado, público, loopback)
+- Log estruturado para observabilidade (Zabbix, Grafana, ELK, etc.)
 - Suporte a favicon (`/favicon.ico`)
-- Deploy 100% automatizado via `oc process`
-- Build externo via GitHub Actions e push para Quay.io
+- Deploy automatizado via `oc process`
+- Build externo via GitHub Actions com push para Quay.io
 
 ---
 
