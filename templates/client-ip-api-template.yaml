@@ -25,9 +25,34 @@ objects:
       spec:
         containers:
           - name: ${APP_NAME}
-            image: quay.io/thiagobotelho/client-ip-api:latest
+            image: ${IMAGE}
+            imagePullPolicy: IfNotPresent
             ports:
-              - containerPort: 8080
+              - name: http
+                containerPort: 8080
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: http
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: http
+              initialDelaySeconds: 10
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+              limits:
+                cpu: 250m
+                memory: 256Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+              runAsNonRoot: true
+              seccompProfile:
+                type: RuntimeDefault
 
 - apiVersion: v1
   kind: Service
@@ -38,9 +63,10 @@ objects:
     selector:
       app: ${APP_NAME}
     ports:
-      - protocol: TCP
+      - name: http
+        protocol: TCP
         port: 80
-        targetPort: 8080
+        targetPort: http
 
 - apiVersion: route.openshift.io/v1
   kind: Route
@@ -52,7 +78,7 @@ objects:
       kind: Service
       name: ${APP_NAME}
     port:
-      targetPort: 8080
+      targetPort: http
     tls:
       termination: edge
 
@@ -64,3 +90,7 @@ parameters:
   - name: NAMESPACE
     description: Namespace onde a aplicação será provisionada
     value: client-ip-api
+
+  - name: IMAGE
+    description: Imagem imutável recomendada (tag de versão ou digest)
+    value: quay.io/thiagobotelho/client-ip-api:latest

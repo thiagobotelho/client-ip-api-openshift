@@ -1,4 +1,5 @@
 from flask import Flask, request, send_from_directory, jsonify
+from markupsafe import escape
 from datetime import datetime, timezone
 import os
 import logging
@@ -183,6 +184,11 @@ def api():
     return jsonify(data), 200
 
 
+@app.route("/healthz")
+def healthz():
+    return jsonify({"status": "ok"}), 200
+
+
 @app.route("/")
 def index():
     data = get_client_context()
@@ -202,6 +208,14 @@ def index():
         data["true_client_ip"],
         data["host"],
     )
+
+    # Headers são entrada não confiável; escape antes de interpolar no HTML.
+    data = {
+        key: escape(str(value if value is not None else "Não informado"))
+        for key, value in data.items()
+        if key != "proxy_chain"
+    }
+    chain_html = escape(chain_html)
 
     html = f"""
     <!DOCTYPE html>
