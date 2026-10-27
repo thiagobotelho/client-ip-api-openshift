@@ -12,9 +12,15 @@ objects:
   kind: Deployment
   metadata:
     name: ${APP_NAME}
+    # Namespace deste objeto; não confundir com seleção de namespaces de origem.
+    # Namespace deste objeto; não confundir com seleção de namespaces de origem.
     namespace: ${NAMESPACE}
   spec:
+    # Número de instâncias; réplicas isoladamente não garantem alta disponibilidade.
+    # Número de instâncias; réplicas isoladamente não garantem alta disponibilidade.
     replicas: 1
+    # Seletores precisam corresponder aos labels dos recursos de destino.
+    # Seletores precisam corresponder aos labels dos recursos de destino.
     selector:
       matchLabels:
         app: ${APP_NAME}
@@ -30,10 +36,14 @@ objects:
             ports:
               - name: http
                 containerPort: 8080
+            # Prontidão controla recebimento de tráfego, sem provar integrações externas.
+            # Prontidão controla recebimento de tráfego, sem provar integrações externas.
             readinessProbe:
               httpGet:
                 path: /healthz
                 port: http
+            # Falha desta sonda pode reiniciar o container; evite depender de serviços externos.
+            # Falha desta sonda pode reiniciar o container; evite depender de serviços externos.
             livenessProbe:
               httpGet:
                 path: /healthz
@@ -46,6 +56,8 @@ objects:
               limits:
                 cpu: 250m
                 memory: 256Mi
+            # Restringe privilégios do processo; conferir compatibilidade com a SCC.
+            # Restringe privilégios do processo; conferir compatibilidade com a SCC.
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:
@@ -79,6 +91,8 @@ objects:
       name: ${APP_NAME}
     port:
       targetPort: http
+    # TLS define transporte e confiança; não desabilitar validação para contornar erros.
+    # TLS define transporte e confiança; não desabilitar validação para contornar erros.
     tls:
       termination: edge
 
@@ -93,4 +107,4 @@ parameters:
 
   - name: IMAGE
     description: Imagem imutável recomendada (tag de versão ou digest)
-    value: quay.io/thiagobotelho/client-ip-api:latest
+    value: quay.io/thiagobotelho/client-ip-api@sha256:752c540a5c75abb2a5f4862c3dad499b615cf5d347b95626c96968b5863bcc40

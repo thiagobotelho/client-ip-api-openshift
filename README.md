@@ -106,3 +106,7 @@ oc logs -n client-ip-api deployment/client-ip-api
 ## 📘 Licença
 
 MIT License
+
+## Aprender a configuração
+
+Consulte o [guia comentado](docs/APRENDIZADO.md) para entender componentes, escolhas, testes positivos/negativos e reversão.
